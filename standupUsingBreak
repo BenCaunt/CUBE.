@@ -1,0 +1,69 @@
+#include <Servo.h>
+
+
+Servo ESC;
+Servo GobildaServo; 
+
+
+#define READY_POSITION        700
+#define CLAMPING_POSITION     500
+
+unsigned long start_of_motor_arm_first = 0;
+unsigned long start_of_motor_arm_second = 0;
+unsigned long time_for_motor_arm = 4000;
+long state = 0;
+
+
+
+#define ESC_MIN_THROTTLE            1070
+#define ESC_MAX_THROTTLE            1852
+#define ESC_MID_THROTTLE            1480
+#define ESC_REVERSE_THROTTLE        1488
+
+#define ESC_ARM_SIGNAL              1480
+#define ESC_ARM_TIME                2000
+
+int pwmSpeed = ESC_ARM_SIGNAL;  // value from the analog pin
+
+void setServoPosition(int mU, Servo servo) {
+  servo.writeMicroseconds(mU);
+}
+
+
+void setup() {
+  Serial.begin(9600);
+  GobildaServo.attach(A1,500,2500);
+  ESC.attach(A0,1000,2000); // (pin, min pulse width, max pulse width in microseconds) 
+
+  ESC.writeMicroseconds(1440);
+  setServoPosition(READY_POSITION,GobildaServo);
+
+  delay(1000);
+
+  start_of_motor_arm_first = millis();
+
+  state = 1;
+
+
+}
+
+void loop() {
+    if (start_of_motor_arm_first + time_for_motor_arm > millis()) {
+      state = 2;
+      pwmSpeed = ESC_ARM_SIGNAL; 
+
+    } else if (start_of_motor_arm_first + (time_for_motor_arm * 3) > millis()) {
+      state = 3;
+      pwmSpeed = 1510; 
+    } else {
+      state = 4;
+      pwmSpeed = 1450;
+      setServoPosition(CLAMPING_POSITION,GobildaServo);
+    }
+
+    Serial.print(state);
+
+    ESC.writeMicroseconds(pwmSpeed);
+
+    delay(15);
+}
